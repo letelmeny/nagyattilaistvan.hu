@@ -1,0 +1,98 @@
+<html>
+  <head>
+    <title>Timestamp expander</title>
+  <script>
+    function parse_day(day) {
+      var this_year = "2021";
+      if (/^[0-9]{3}$/.test(day)) {
+        day = "0" + day;
+			}
+      if (/^[0-9]{4}$/.test(day)) {
+        return this_year + "-" + day.slice(0,2) + "-" + day.slice(2,4);
+      } else if (/^[0-9]{6}$/.test(day)) {
+        return "20" + day.slice(0,2) + "-" + day.slice(2,4) + "-" + day.slice(4,6);
+      } else if (/^[0-9]{8}$/.test(day)) {
+        return day.slice(0,4) + "-" + day.slice(4,6) + "-" + day.slice(6,8);
+      } else {
+        console.log("bad date format");
+      }
+    }
+
+    function parse_time(time) {
+      if (/^[0-9]{1}$/.test(time) || /^[0-9]{3}$/.test(time)) {
+        time = "0" + time;
+      }
+      if (/^[0-9]{2}$/.test(time)) {
+        return time + ":" + "00";
+      } else if (/^[0-9]{4}$/.test(time)) {
+        return time.slice(0,2) + ":" + time.slice(2,4);
+      } else {
+        console.log("bad time format");
+      }
+    }
+
+    function parse_line(line) {
+      /* ok, we do the work here.
+      Lines always define a date and a time. No matter what.
+      As such, any line must specify a time, and optionally a date.
+      If date is omitted, it is taken from the previous line.
+      (If there is no previous line, that's too bad, let's use 19700101)
+      */
+      var sections = line.split(/\s+/);
+      //console.log(sections);
+      if (sections.length==0) {
+        console.log("empty line");
+        return undefined;
+      }
+      if (sections.length>2) {
+        console.log("line has too many sections");
+        return undefined;
+      }
+      var section_2_is_valid = (sections.length == 2);
+      var section_1 = sections[0];
+      var section_2 = sections[1];
+      //console.log("1: " + section_1 + ", 2:" + section_2);
+      if (!(/^[0-9]+$/.test(section_1) && ((!section_2_is_valid) || /^[0-9]+$/.test(section_2)))) {
+        console.log('bad input: ' + line);
+        return undefined;
+      }
+      var res = Object();
+      if (section_2_is_valid) {
+        res.day = parse_day(section_1);
+        res.time = parse_time(section_2);
+      } else {
+        res.time = parse_time(section_1);
+      }
+      return res;
+    }
+
+    function go() {
+      var textarea = document.getElementById("text");
+      var in_str = textarea.value;
+      var in_lines = in_str.split('\n');
+      var curr_date = "1970-01-01";
+      var output = ""
+      for (i=0;i<in_lines.length;i++) {
+        var line = in_lines[i];
+        parsed_line = parse_line(line);
+        if (parsed_line === undefined) continue; // ignore errors
+        var day = parsed_line.day
+        var time = parsed_line.time
+        //console.log(parse_line(line));
+        if (day !== undefined) {
+          curr_date = day;
+        }
+        //console.log(curr_date + " " + time);
+        output = output + curr_date + " " + time + "\n";
+      }
+      textarea.value = output;
+    }
+  </script>
+  </head>
+  <body>
+    <textarea id="text" cols="80" rows="20"></textarea>
+    <p>
+      <button id="go" onclick="go()">Go</button>
+    </p>
+  </body>
+</html>
