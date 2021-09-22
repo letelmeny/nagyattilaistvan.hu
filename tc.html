@@ -7,7 +7,7 @@
       var this_year = "2021";
       if (/^[0-9]{3}$/.test(day)) {
         day = "0" + day;
-			}
+      }
       if (/^[0-9]{4}$/.test(day)) {
         return this_year + "-" + day.slice(0,2) + "-" + day.slice(2,4);
       } else if (/^[0-9]{6}$/.test(day)) {
@@ -42,7 +42,6 @@
       */
       var sections = line.split(/\s+/);
       var res = Object();
-      //console.log(sections);
       if (sections.length==0) {
         console.log("empty line");
         return undefined;
@@ -53,7 +52,12 @@
       }
       if (sections[0]=="FA1") {
         res.special = "FA1"; // "FA2" means offer date in one line
-        sections.shift(); // good thing JS has a function for this
+        sections.shift();
+      }
+      if (/^[+-][0-9]+$/.test(sections[0])) {
+      // if special is an integer it means offset by n days
+        res.special = parseInt(sections[0]);
+        sections.shift();
       }
       if (sections.length>2) {
         console.log("line has too many sections");
@@ -62,7 +66,6 @@
       var section_2_is_valid = (sections.length == 2);
       var section_1 = sections[0];
       var section_2 = sections[1];
-      //console.log("1: " + section_1 + ", 2:" + section_2);
       if (!(/^[0-9]+$/.test(section_1) && ((!section_2_is_valid) || /^[0-9]+$/.test(section_2)))) {
         console.log('bad input: ' + line);
         return undefined;
@@ -101,6 +104,13 @@
       return p1 + parsed_line.day + p2 + weekday + p3 + parsed_line.time + p4;
     }
 
+    function shift_date(date_str, offset) {
+      var parts = date_str.split('-');
+      var d = new Date(parts[0], parts[1] - 1, parts[2]); 
+      d.setDate(d.getDate() + offset);
+      return d.toISOString().substring(0, 10);
+    }
+
     function go() {
       var textarea = document.getElementById("text");
       var in_str = textarea.value;
@@ -116,23 +126,25 @@
             case "FA":
               var mail = compose_mail_suggested_time(parsed_line);
               output = output + mail;
-              break;
+              continue;
             case "FA1":
               var mail = compose_line_suggested_time(parsed_line);
               output = output + mail;
-              break;
+              continue;
             default:
-              console.log("bad special line");
+              if (isNaN(parsed_line.special))
+                console.log("unrecognized special");
           }
-          continue;
-				}
+        }
         var day = parsed_line.day
+        // this is where we handle the date offset special
+        if (typeof parsed_line.special == "number") {
+          day = shift_date(day, parsed_line.special);
+        }
         var time = parsed_line.time
-        //console.log(parse_line(line));
         if (day !== undefined) {
           curr_date = day;
         }
-        //console.log(curr_date + " " + time);
         output = output + curr_date + " " + time + "\n";
       }
       textarea.value = output;
@@ -144,6 +156,6 @@
     <p>
       <button id="go" onclick="go()">Go</button>
     </p>
-    <p>Special codes: FA, FA1</p>
+    <p>Special codes: FA, FA1, +[days]</p>
   </body>
 </html>
