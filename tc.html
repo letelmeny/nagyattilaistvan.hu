@@ -1,6 +1,7 @@
 <html>
   <head>
     <title>Timestamp expander</title>
+    <meta charset="utf-8"/>
   <script>
     function parse_day(day) {
       var this_year = "2021";
@@ -37,12 +38,22 @@
       As such, any line must specify a time, and optionally a date.
       If date is omitted, it is taken from the previous line.
       (If there is no previous line, that's too bad, let's use 19700101)
+      Plus, there are some special lines. These do magic.
       */
       var sections = line.split(/\s+/);
+      var res = Object();
       //console.log(sections);
       if (sections.length==0) {
         console.log("empty line");
         return undefined;
+      }
+      if (sections[0]=="FA") {
+        res.special = "FA"; // "FA" means offer date
+        sections.shift(); // good thing JS has a function for this
+      }
+      if (sections[0]=="FA1") {
+        res.special = "FA1"; // "FA2" means offer date in one line
+        sections.shift(); // good thing JS has a function for this
       }
       if (sections.length>2) {
         console.log("line has too many sections");
@@ -56,7 +67,6 @@
         console.log('bad input: ' + line);
         return undefined;
       }
-      var res = Object();
       if (section_2_is_valid) {
         res.day = parse_day(section_1);
         res.time = parse_time(section_2);
@@ -64,6 +74,31 @@
         res.time = parse_time(section_1);
       }
       return res;
+    }
+
+    function get_day_of_week(date) {
+      // translated from https://stackoverflow.com/a/17964373
+      const dayOfWeek = new Date(date).getDay();    
+      return isNaN(dayOfWeek) ? null : 
+        ['vasárnap', 'hétfő', 'kedd', 'szerda', 'csütörtök', 'péntek', 'szombat'][dayOfWeek];
+    }
+
+    function compose_line_suggested_time(parsed_line) {
+      var p1 = "Üdvözlöm! ";
+      var p2 = " (";
+      var p3 = ") ";
+      var p4 = " megfelelne Önnek? Dr. Nagy Attila István";
+      var weekday = get_day_of_week(parsed_line.day);
+      return p1 + parsed_line.day + p2 + weekday + p3 + parsed_line.time + p4;
+    }
+
+    function compose_mail_suggested_time(parsed_line) {
+      var p1 = "Üdvözlöm!\n\n";
+      var p2 = " (";
+      var p3 = ") ";
+      var p4 = " megfelelne Önnek?\n\nTisztelettel:\nDr. Nagy Attila István";
+      var weekday = get_day_of_week(parsed_line.day);
+      return p1 + parsed_line.day + p2 + weekday + p3 + parsed_line.time + p4;
     }
 
     function go() {
@@ -76,6 +111,21 @@
         var line = in_lines[i];
         parsed_line = parse_line(line);
         if (parsed_line === undefined) continue; // ignore errors
+        if (parsed_line.special) {
+          switch (parsed_line.special) {
+            case "FA":
+              var mail = compose_mail_suggested_time(parsed_line);
+              output = output + mail;
+              break;
+            case "FA1":
+              var mail = compose_line_suggested_time(parsed_line);
+              output = output + mail;
+              break;
+            default:
+              console.log("bad special line");
+          }
+          continue;
+				}
         var day = parsed_line.day
         var time = parsed_line.time
         //console.log(parse_line(line));
@@ -94,5 +144,6 @@
     <p>
       <button id="go" onclick="go()">Go</button>
     </p>
+    <p>Special codes: FA, FA1</p>
   </body>
 </html>
